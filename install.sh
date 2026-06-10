@@ -71,44 +71,12 @@ export SUB="$INPUT_SUB"
 export ARGO_DOMAIN="$INPUT_ARGO_DOMAIN"
 export ARGO_AUTH="$INPUT_ARGO_AUTH"
 
-# 安装快捷命令
-cat > /usr/local/bin/nodex-sub << 'SUBCMD'
-#!/bin/bash
-SUB_FILE="$HOME/nodex-argo/sub.txt"
-if [ -f "$SUB_FILE" ]; then
-  cat "$SUB_FILE"
-else
-  echo "sub.txt 不存在，请等待服务启动完成"
-fi
-SUBCMD
-chmod +x /usr/local/bin/nodex-sub 2>/dev/null || {
-  mkdir -p "$HOME/.local/bin"
-  cp /usr/local/bin/nodex-sub "$HOME/.local/bin/nodex-sub" 2>/dev/null || true
-}
-
-cat > /usr/local/bin/nodex-del << DELCMD
-#!/bin/bash
-echo "正在彻底删除 nodex-argo..."
-systemctl stop nodex-argo 2>/dev/null || true
-systemctl disable nodex-argo 2>/dev/null || true
-rm -f /etc/systemd/system/nodex-argo.service
-systemctl daemon-reload 2>/dev/null || true
-rm -rf "$APP_DIR"
-rm -f "$HOME/xray.zip" "$HOME/xray" "$HOME/cloudflared"
-rm -rf "$HOME/xray" "$HOME/v2ray"
-rm -f "$HOME/uuid.txt" "$HOME/trojan.txt" "$HOME/xray-config.json"
-rm -f /usr/local/bin/nodex-sub /usr/local/bin/nodex-del
-rm -f "$HOME/.local/bin/nodex-sub" "$HOME/.local/bin/nodex-del"
-echo "删除完成"
-DELCMD
-chmod +x /usr/local/bin/nodex-del 2>/dev/null || {
-  mkdir -p "$HOME/.local/bin"
-  cp /usr/local/bin/nodex-del "$HOME/.local/bin/nodex-del" 2>/dev/null || true
-}
-
-# 开机自启
 if command -v systemctl >/dev/null 2>&1; then
-  cat > /tmp/nodex-argo.service << EOF
+  echo ""
+  echo -e "${YELLOW}是否设置开机自启？(y/n)${NC}"
+  read -p "" ENABLE_AUTOSTART
+  if [ "$ENABLE_AUTOSTART" = "y" ]; then
+    cat > /tmp/nodex-argo.service <<EOF
 [Unit]
 Description=nodex-argo service
 After=network.target
@@ -132,33 +100,16 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-  sudo mv /tmp/nodex-argo.service /etc/systemd/system/nodex-argo.service
-  sudo systemctl daemon-reload
-  sudo systemctl enable nodex-argo
-  sudo systemctl start nodex-argo
-  echo ""
-  echo -e "${GREEN}服务已启动并设置开机自启${NC}"
-  echo -e "${GREEN}查看日志: sudo journalctl -u nodex-argo -f${NC}"
-  echo -e "${GREEN}查看节点: nodex-sub${NC}"
-  echo -e "${GREEN}彻底删除: nodex-del${NC}"
-else
-  # 没有 systemctl 用 nohup 后台运行
-  nohup node "$APP_DIR/index.js" > "$APP_DIR/run.log" 2>&1 &
-  echo $! > "$APP_DIR/nodex.pid"
-  echo ""
-  echo -e "${GREEN}服务已后台启动${NC}"
-  echo -e "${GREEN}查看日志: tail -f $APP_DIR/run.log${NC}"
-  echo -e "${GREEN}查看节点: nodex-sub${NC}"
-  echo -e "${GREEN}彻底删除: nodex-del${NC}"
-
-  # 写入开机自启到 ~/.bashrc
-  AUTOSTART="nohup node $APP_DIR/index.js > $APP_DIR/run.log 2>&1 &"
-  if ! grep -q "nodex-argo" "$HOME/.bashrc" 2>/dev/null; then
-    echo "" >> "$HOME/.bashrc"
-    echo "# nodex-argo autostart" >> "$HOME/.bashrc"
-    echo "$AUTOSTART" >> "$HOME/.bashrc"
+    sudo mv /tmp/nodex-argo.service /etc/systemd/system/nodex-argo.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable nodex-argo
+    sudo systemctl start nodex-argo
+    echo -e "${GREEN}开机自启设置成功${NC}"
+    echo -e "${GREEN}查看日志: sudo journalctl -u nodex-argo -f${NC}"
+    exit 0
   fi
 fi
 
 echo ""
-echo -e "${YELLOW}等待服务启动，节点链接将写入 $APP_DIR/sub.txt${NC}"
+echo -e "${GREEN}正在启动...${NC}"
+node index.js
