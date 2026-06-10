@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyond The Tide</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family: "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at top, #12385a 0%, #081624 40%, #02070d 100%);
+    color:#d7e7f5;
+    line-height:1.8;
+    overflow-x:hidden;
+}
+
+.hero{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    padding:20px;
+}
+
+.hero h1{
+    font-size:4rem;
+    letter-spacing:8px;
+    font-weight:300;
+    text-transform:uppercase;
+}
+
+.hero p{
+    margin-top:20px;
+    max-width:600px;
+    color:#9fc3df;
+    font-size:1.1rem;
+}
+
+.scroll{
+    position:absolute;
+    bottom:40px;
+    color:#7ea9c8;
+    font-size:0.9rem;
+    letter-spacing:2px;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:80px 25px;
+}
+
+.post{
+    margin-bottom:90px;
+}
+
+.post h2{
+    font-weight:300;
+    font-size:2rem;
+    margin-bottom:15px;
+    color:#eef7ff;
+}
+
+.meta{
+    color:#6f93ad;
+    font-size:0.8rem;
+    letter-spacing:1px;
+    margin-bottom:25px;
+}
+
+.post p{
+    margin-bottom:20px;
+    color:#c6d8e7;
+}
+
+.quote{
+    margin:30px 0;
+    padding-left:20px;
+    border-left:3px solid #3e7ca5;
+    color:#91b8d3;
+    font-style:italic;
+}
+
+.divider{
+    height:1px;
+    background:linear-gradient(
+        to right,
+        transparent,
+        rgba(120,170,210,.5),
+        transparent
+    );
+    margin:70px 0;
+}
+
+footer{
+    text-align:center;
+    padding:60px 20px;
+    color:#6d8ba0;
+    border-top:1px solid rgba(255,255,255,0.05);
+}
+
+.wave{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    height:120px;
+    background:
+    linear-gradient(
+        transparent,
+        rgba(18,56,90,0.25)
+    );
+    pointer-events:none;
+}
+
+.highlight{
+    color:#8fd3ff;
+}
+</style>
+</head>
+
+<body>
+
+<section class="hero">
+    <h1>Beyond The Tide</h1>
+    <p>
+        A journal about oceans, distance, and the quiet beauty
+        of being alone beneath an endless sky.
+    </p>
+    <div class="scroll">SCROLL DOWN</div>
+</section>
+
+<div class="container">
+
+    <article class="post">
+        <h2>The Language of Waves</h2>
+        <div class="meta">May 12, 2026 · Ocean Journal</div>
+
+        <p>
+            The ocean never speaks in words, yet it says more than most conversations.
+            Every wave arrives with a message from somewhere far beyond the horizon,
+            only to disappear before it can be fully understood.
+        </p>
+
+        <p>
+            Standing alone on a shoreline feels strangely familiar.
+            The sea asks for nothing. It simply exists,
+            moving endlessly between presence and absence.
+        </p>
+
+        <div class="quote">
+            "Some silences are not empty. They are filled with water, wind, and memory."
+        </div>
+    </article>
+
+    <div class="divider"></div>
+
+    <article class="post">
+        <h2>Ships in the Dark</h2>
+        <div class="meta">May 18, 2026 · Night Reflections</div>
+
+        <p>
+            At night, distant ships become floating stars.
+            Tiny lights drift across the black water,
+            carrying unknown stories toward unknown destinations.
+        </p>
+
+        <p>
+            Watching them reminds us that loneliness and solitude are not the same.
+            One is a wound. The other is a place where thoughts can breathe.
+        </p>
+
+        <p class="highlight">
+            Not every journey needs an audience.
+        </p>
+    </article>
+
+    <div class="divider"></div>
+
+    <article class="post">
+        <h2>Where the Horizon Ends</h2>
+        <div class="meta">May 27, 2026 · Deep Thoughts</div>
+
+        <p>
+            The horizon is one of nature's greatest illusions.
+            It looks like a destination, yet it moves farther away
+            every time we approach it.
+        </p>
+
+        <p>
+            Perhaps life works the same way.
+            We chase certainty only to discover that meaning
+            exists in the journey itself.
+        </p>
+
+        <div class="quote">
+            "The ocean does not promise answers. It teaches acceptance."
+        </div>
+    </article>
+
+</div>
+
+<footer>
+    Beyond The Tide © 2026<br>
+    Written between moonlight and seawater.
+</footer>
+
+<div class="wave"></div>
+
+</body>
+</html>
