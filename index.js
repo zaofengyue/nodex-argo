@@ -310,15 +310,14 @@ async function main() {
     `&path=${encodeURIComponent(WS_PATH_TROJAN)}#${encodeURIComponent(NAME)}`;
 
   const ALL_LINKS = [VMESS_LINK, VLESS_LINK, TROJAN_LINK].join('\n');
-  global.SUB_CONTENT = Buffer.from(ALL_LINKS).toString('base64');
+  const SUB_BASE64 = Buffer.from(ALL_LINKS).toString('base64');
+  global.SUB_CONTENT = SUB_BASE64;
 
   const SUB_FILE = `${process.cwd()}/sub.txt`;
-  fs.writeFileSync(SUB_FILE, ALL_LINKS);
+  fs.writeFileSync(SUB_FILE, SUB_BASE64);
 
-  console.log('================= 节点链接 =================');
-  console.log(`VMess : ${VMESS_LINK}`);
-  console.log(`VLESS : ${VLESS_LINK}`);
-  console.log(`Trojan: ${TROJAN_LINK}`);
+  console.log('================= 订阅内容 =================');
+  console.log(SUB_BASE64);
   console.log('============================================');
   console.log(`订阅地址: https://${HOST}${SUB_PATH}`);
   console.log(`节点文件: ${SUB_FILE}`);
