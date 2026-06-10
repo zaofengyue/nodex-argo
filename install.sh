@@ -86,30 +86,25 @@ fi
 SUBCMD
 chmod +x "$LOCAL_BIN/nodex-sub"
 
-# nodex-del 根据实际启动方式清理
 cat > "$LOCAL_BIN/nodex-del" << DELCMD
 #!/bin/bash
 echo "正在彻底删除 nodex-argo..."
 
-# 1. 停止用户级 systemd 服务（如果存在）
+# 停止用户级 systemd 服务（如果存在）
 systemctl --user stop nodex-argo 2>/dev/null || true
 systemctl --user disable nodex-argo 2>/dev/null || true
 rm -f "\$HOME/.config/systemd/user/nodex-argo.service"
 systemctl --user daemon-reload 2>/dev/null || true
 
-# 2. 移除 crontab @reboot 条目
-crontab -l 2>/dev/null | grep -v "nodex-argo" | crontab - 2>/dev/null || true
-
-# 3. 停止 nohup/crontab 拉起的进程（读 PID 文件）
+# 停止 nohup 进程（如果存在）
 if [ -f "$APP_DIR/nodex.pid" ]; then
-  PID=\$(cat "$APP_DIR/nodex.pid")
-  kill "\$PID" 2>/dev/null || true
+  kill \$(cat "$APP_DIR/nodex.pid") 2>/dev/null || true
 fi
 
-# 4. 清理 ~/.bashrc 中的残留条目
+# 清理 ~/.bashrc 中的自启条目
+sed -i '/nodex-argo autostart/d' "\$HOME/.bashrc" 2>/dev/null || true
 sed -i '/nodex-argo/d' "\$HOME/.bashrc" 2>/dev/null || true
 
-# 5. 删除文件
 rm -rf "$APP_DIR"
 rm -f "\$HOME/xray.zip" "\$HOME/xray" "\$HOME/cloudflared"
 rm -rf "\$HOME/xray" "\$HOME/v2ray"
@@ -127,29 +122,8 @@ if ! echo "$PATH" | grep -q "$LOCAL_BIN"; then
   export PATH="$LOCAL_BIN:$PATH"
 fi
 
-# ── 生成启动包装脚本（供 crontab @reboot 调用，内含完整环境变量）────────
-WRAPPER="$APP_DIR/start.sh"
-NODE_BIN="$(command -v node)"
-
-cat > "$WRAPPER" << WRAPEOF
-#!/bin/bash
-# nodex-argo 自动生成的启动包装脚本，请勿手动修改
-export UUID="$INPUT_UUID"
-export TROJAN_PASS="$INPUT_TROJAN_PASS"
-export PORT="$INPUT_PORT"
-export ARGO_PORT="$INPUT_ARGO_PORT"
-export NAME="$INPUT_NAME"
-export SUB="$INPUT_SUB"
-export ARGO_DOMAIN="$INPUT_ARGO_DOMAIN"
-export ARGO_AUTH="$INPUT_ARGO_AUTH"
-
-cd "$APP_DIR"
-nohup $NODE_BIN "$APP_DIR/index.js" >> "$APP_DIR/run.log" 2>&1 &
-echo \$! > "$APP_DIR/nodex.pid"
-WRAPEOF
-chmod +x "$WRAPPER"
-
-# ── 开机自启：优先用户级 systemd，否则用 crontab @reboot ─────────────────
+# ── 开机自启：优先用户级 systemd，否则用 nohup + .bashrc ─────────────────
+# 判断用户级 systemd 是否可用
 USER_SYSTEMD_OK=false
 if command -v systemctl >/dev/null 2>&1 && systemctl --user status >/dev/null 2>&1; then
   USER_SYSTEMD_OK=true
@@ -176,7 +150,7 @@ Environment=NAME=$INPUT_NAME
 Environment=SUB=$INPUT_SUB
 Environment=ARGO_DOMAIN=$INPUT_ARGO_DOMAIN
 Environment=ARGO_AUTH=$INPUT_ARGO_AUTH
-ExecStart=$NODE_BIN $APP_DIR/index.js
+ExecStart=$(command -v node) $APP_DIR/index.js
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -189,29 +163,34 @@ EOF
   systemctl --user daemon-reload
   systemctl --user enable nodex-argo
   systemctl --user start nodex-argo
+
+  # 确保登出后服务仍运行（需要 loginctl，权限不足时静默跳过）
   loginctl enable-linger "$USER" 2>/dev/null || true
 
   echo ""
   echo -e "${GREEN}服务已通过用户级 systemd 启动并设置开机自启${NC}"
   echo -e "${GREEN}查看日志: journalctl --user -u nodex-argo -f${NC}"
+  echo -e "${GREEN}查看节点: nodex-sub${NC}"
+  echo -e "${GREEN}彻底删除: nodex-del${NC}"
 
 else
-  # ── fallback：crontab @reboot（无需 root / systemd）─────────────────
-  # 先立即启动一次
-  bash "$WRAPPER"
+  # ── fallback：nohup 后台运行 + .bashrc 自启 ──────────────────────────
+  nohup node "$APP_DIR/index.js" > "$APP_DIR/run.log" 2>&1 &
+  echo $! > "$APP_DIR/nodex.pid"
 
-  # 注册 @reboot，避免重复写入
-  ( crontab -l 2>/dev/null | grep -v "nodex-argo"; \
-    echo "@reboot bash $WRAPPER  # nodex-argo autostart" \
-  ) | crontab -
+  AUTOSTART="nohup node $APP_DIR/index.js > $APP_DIR/run.log 2>&1 &"
+  if ! grep -q "nodex-argo" "$HOME/.bashrc" 2>/dev/null; then
+    echo "" >> "$HOME/.bashrc"
+    echo "# nodex-argo autostart" >> "$HOME/.bashrc"
+    echo "$AUTOSTART" >> "$HOME/.bashrc"
+  fi
 
   echo ""
-  echo -e "${GREEN}服务已通过 nohup 后台启动，并已注册 crontab @reboot 开机自启${NC}"
+  echo -e "${GREEN}服务已通过 nohup 后台启动${NC}"
   echo -e "${GREEN}查看日志: tail -f $APP_DIR/run.log${NC}"
-  echo -e "${GREEN}验证 crontab: crontab -l${NC}"
+  echo -e "${GREEN}查看节点: nodex-sub${NC}"
+  echo -e "${GREEN}彻底删除: nodex-del${NC}"
 fi
 
-echo -e "${GREEN}查看节点: nodex-sub${NC}"
-echo -e "${GREEN}彻底删除: nodex-del${NC}"
 echo ""
 echo -e "${YELLOW}等待服务启动，节点链接将写入 $APP_DIR/sub.txt${NC}"
