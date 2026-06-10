@@ -86,7 +86,6 @@ fi
 SUBCMD
 chmod +x "$LOCAL_BIN/nodex-sub"
 
-# nodex-del 根据实际启动方式清理
 cat > "$LOCAL_BIN/nodex-del" << DELCMD
 #!/bin/bash
 echo "正在彻底删除 nodex-argo..."
@@ -97,16 +96,17 @@ systemctl --user disable nodex-argo 2>/dev/null || true
 rm -f "\$HOME/.config/systemd/user/nodex-argo.service"
 systemctl --user daemon-reload 2>/dev/null || true
 
-# 2. 移除 crontab @reboot 条目
-crontab -l 2>/dev/null | grep -v "nodex-argo" | crontab - 2>/dev/null || true
-
-# 3. 停止 nohup/crontab 拉起的进程（读 PID 文件）
+# 2. 停止进程（读 PID 文件）
 if [ -f "$APP_DIR/nodex.pid" ]; then
   PID=\$(cat "$APP_DIR/nodex.pid")
   kill "\$PID" 2>/dev/null || true
 fi
 
-# 4. 清理 ~/.bashrc 中的残留条目
+# 3. 兜底：按进程名 kill
+pkill -f "nodex-argo/index.js" 2>/dev/null || true
+
+# 4. 清理 ~/.bashrc 中的自启条目
+sed -i '/# nodex-argo autostart/d' "\$HOME/.bashrc" 2>/dev/null || true
 sed -i '/nodex-argo/d' "\$HOME/.bashrc" 2>/dev/null || true
 
 # 5. 删除文件
@@ -127,7 +127,7 @@ if ! echo "$PATH" | grep -q "$LOCAL_BIN"; then
   export PATH="$LOCAL_BIN:$PATH"
 fi
 
-# ── 生成启动包装脚本（供 crontab @reboot 调用，内含完整环境变量）────────
+# ── 生成启动包装脚本（内含完整环境变量）────────────────────────────────
 WRAPPER="$APP_DIR/start.sh"
 NODE_BIN="$(command -v node)"
 
@@ -149,7 +149,7 @@ echo \$! > "$APP_DIR/nodex.pid"
 WRAPEOF
 chmod +x "$WRAPPER"
 
-# ── 开机自启：优先用户级 systemd，否则用 crontab @reboot ─────────────────
+# ── 开机自启：优先用户级 systemd，否则写入 ~/.bashrc ─────────────────────
 USER_SYSTEMD_OK=false
 if command -v systemctl >/dev/null 2>&1 && systemctl --user status >/dev/null 2>&1; then
   USER_SYSTEMD_OK=true
@@ -196,19 +196,26 @@ EOF
   echo -e "${GREEN}查看日志: journalctl --user -u nodex-argo -f${NC}"
 
 else
-  # ── fallback：crontab @reboot（无需 root / systemd）─────────────────
+  # ── fallback：nohup 立即启动 + ~/.bashrc 进程守活────────────────────
   # 先立即启动一次
   bash "$WRAPPER"
 
-  # 注册 @reboot，避免重复写入
-  ( crontab -l 2>/dev/null | grep -v "nodex-argo"; \
-    echo "@reboot bash $WRAPPER  # nodex-argo autostart" \
-  ) | crontab -
+  # 写入 ~/.bashrc，每次开终端检测进程，死了自动拉起
+  # 与 argosbx 同款思路，pgrep 判断存活避免重复启动
+  if ! grep -q "# nodex-argo autostart" "$HOME/.bashrc" 2>/dev/null; then
+    cat >> "$HOME/.bashrc" << BASHRCEOF
+
+# nodex-argo autostart
+if ! pgrep -f "nodex-argo/index.js" >/dev/null 2>&1; then
+  bash "$WRAPPER" >/dev/null 2>&1
+fi
+BASHRCEOF
+  fi
 
   echo ""
-  echo -e "${GREEN}服务已通过 nohup 后台启动，并已注册 crontab @reboot 开机自启${NC}"
+  echo -e "${GREEN}服务已通过 nohup 后台启动${NC}"
+  echo -e "${GREEN}每次打开终端自动检测并恢复进程${NC}"
   echo -e "${GREEN}查看日志: tail -f $APP_DIR/run.log${NC}"
-  echo -e "${GREEN}验证 crontab: crontab -l${NC}"
 fi
 
 echo -e "${GREEN}查看节点: nodex-sub${NC}"
