@@ -15,6 +15,7 @@ const os = require('os');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
+const net = require('net');
 
 const HOME = process.env.HOME || '/tmp';
 const UUID_FILE = `${HOME}/uuid.txt`;
@@ -30,7 +31,16 @@ const V_VMESS_PORT  = 10000;
 const V_VLESS_PORT  = 10001;
 const V_TROJAN_PORT = 10002;
 const CF_PREFER_HOST = 'cdns.doon.eu.org';
-const ARGO_PORT = parseInt(PRESET_ARGO_PORT || process.env.ARGO_PORT || '8001');
+
+function getFreePort() {
+  return new Promise((resolve) => {
+    const srv = net.createServer();
+    srv.listen(0, '127.0.0.1', () => {
+      const port = srv.address().port;
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 function httpGet(url, timeout = 5000) {
   return new Promise((resolve) => {
@@ -97,7 +107,7 @@ async function downloadCloudflared() {
   return CLOUDFLARED_BIN;
 }
 
-function startArgoTunnel(cfBin, argoDomain, argoAuth) {
+function startArgoTunnel(cfBin, argoPort, argoDomain, argoAuth) {
   return new Promise((resolve) => {
     let argoHost = '';
     let args;
@@ -113,7 +123,7 @@ function startArgoTunnel(cfBin, argoDomain, argoAuth) {
     } else {
       console.log('启动临时 Argo 隧道...');
       args = ['tunnel', '--edge-ip-version', 'auto', '--no-autoupdate',
-              '--url', `http://127.0.0.1:${ARGO_PORT}`];
+              '--url', `http://127.0.0.1:${argoPort}`];
       const cf = spawn(cfBin, args, { stdio: 'pipe' });
 
       cf.stderr.on('data', (data) => {
@@ -159,11 +169,22 @@ async function main() {
     fs.writeFileSync(TROJAN_FILE, TROJAN_PASS);
   }
 
-  const INBOUND_PORT = parseInt(PRESET_PORT || process.env.PORT || '3000');
+  // 对外端口：预设 → 平台注入 → 自动找空闲端口
+  const INBOUND_PORT = PRESET_PORT
+    ? parseInt(PRESET_PORT)
+    : process.env.PORT
+      ? parseInt(process.env.PORT)
+      : await getFreePort();
+
   const SUB_RAW = PRESET_SUB || process.env.SUB || 'sub';
   const SUB_PATH = '/' + SUB_RAW.replace(/^\//, '');
   const ARGO_DOMAIN = PRESET_ARGO_DOMAIN || process.env.ARGO_DOMAIN || '';
-  const ARGO_AUTH = PRESET_ARGO_AUTH || process.env.ARGO_AUTH || '';
+  const ARGO_AUTH   = PRESET_ARGO_AUTH   || process.env.ARGO_AUTH   || '';
+
+  // 隧道端口：固定隧道用预设或默认8001，临时隧道随机
+  const ARGO_PORT = (ARGO_DOMAIN && ARGO_AUTH)
+    ? parseInt(PRESET_ARGO_PORT || process.env.ARGO_PORT || '8001')
+    : await getFreePort();
 
   const COUNTRY = await httpGet('https://ipinfo.io/country') ||
                   await httpGet('https://ifconfig.co/country-iso') ||
@@ -238,7 +259,6 @@ async function main() {
   });
 
   argoServer.on('upgrade', (req, socket, head) => {
-    const net = require('net');
     const path = req.url.split('?')[0];
     let targetPort;
 
@@ -291,7 +311,7 @@ async function main() {
   });
 
   const cfBin = await downloadCloudflared();
-  const argoHost = await startArgoTunnel(cfBin, ARGO_DOMAIN, ARGO_AUTH);
+  const argoHost = await startArgoTunnel(cfBin, ARGO_PORT, ARGO_DOMAIN, ARGO_AUTH);
   const HOST = argoHost || 'your-domain.com';
 
   const VMESS_OBJ = {
