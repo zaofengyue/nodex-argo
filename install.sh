@@ -48,15 +48,16 @@ INPUT_ARGO_DOMAIN="${ARGO_DOMAIN:-}"
 INPUT_ARGO_AUTH="${ARGO_AUTH:-}"
 
 # 任意一个变量有值就跳过交互，全部为空才进入交互模式
-if [ -z "$INPUT_UUID" ] && \
-   [ -z "$INPUT_TROJAN_PASS" ] && \
-   [ -z "$INPUT_PORT" ] && \
-   [ -z "$INPUT_ARGO_PORT" ] && \
-   [ -z "$INPUT_NAME" ] && \
-   [ -z "$INPUT_SUB" ] && \
-   [ -z "$INPUT_ARGO_DOMAIN" ] && \
-   [ -z "$INPUT_ARGO_AUTH" ]; then
-  echo ""
+if [ -n "$INPUT_UUID" ] || \
+   [ -n "$INPUT_TROJAN_PASS" ] || \
+   [ -n "$INPUT_PORT" ] || \
+   [ -n "$INPUT_ARGO_PORT" ] || \
+   [ -n "$INPUT_NAME" ] || \
+   [ -n "$INPUT_SUB" ] || \
+   [ -n "$INPUT_ARGO_DOMAIN" ] || \
+   [ -n "$INPUT_ARGO_AUTH" ]; then
+  :
+else
   echo -e "${YELLOW}========== 环境变量配置（留空使用默认值）==========${NC}"
   read -p "UUID（留空自动生成）: " INPUT_UUID
   read -p "TROJAN_PASS（留空自动生成）: " INPUT_TROJAN_PASS
