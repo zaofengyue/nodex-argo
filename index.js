@@ -139,6 +139,7 @@ function startArgoTunnel(cfBin, argoDomain, argoAuth) {
 }
 
 async function main() {
+  // UUID
   let UUID = PRESET_UUID || process.env.UUID || '';
   if (UUID) {
     fs.writeFileSync(UUID_FILE, UUID);
@@ -149,6 +150,7 @@ async function main() {
     fs.writeFileSync(UUID_FILE, UUID);
   }
 
+  // Trojan 密码
   let TROJAN_PASS = PRESET_TROJAN_PASS || process.env.TROJAN_PASS || '';
   if (TROJAN_PASS) {
     fs.writeFileSync(TROJAN_FILE, TROJAN_PASS);
@@ -186,6 +188,7 @@ async function main() {
            COUNTRY ? `${COUNTRY}-xray` : 'xray';
   }
 
+  // xray 配置
   const config = {
     log: { loglevel: 'warning' },
     inbounds: [
@@ -193,22 +196,38 @@ async function main() {
         port: V_VMESS_PORT,
         listen: '127.0.0.1',
         protocol: 'vmess',
-        settings: { clients: [{ id: UUID, alterId: 0 }] },
-        streamSettings: { network: 'ws', wsSettings: { path: WS_PATH_VMESS } }
+        settings: {
+          clients: [{ id: UUID, alterId: 0 }]
+        },
+        streamSettings: {
+          network: 'ws',
+          wsSettings: { path: WS_PATH_VMESS }
+        }
       },
       {
         port: V_VLESS_PORT,
         listen: '127.0.0.1',
         protocol: 'vless',
-        settings: { clients: [{ id: UUID, flow: '' }], decryption: 'none' },
-        streamSettings: { network: 'ws', wsSettings: { path: WS_PATH_VLESS } }
+        settings: {
+          clients: [{ id: UUID, flow: '' }],
+          decryption: 'none'
+        },
+        streamSettings: {
+          network: 'ws',
+          wsSettings: { path: WS_PATH_VLESS }
+        }
       },
       {
         port: V_TROJAN_PORT,
         listen: '127.0.0.1',
         protocol: 'trojan',
-        settings: { clients: [{ password: TROJAN_PASS }] },
-        streamSettings: { network: 'ws', wsSettings: { path: WS_PATH_TROJAN } }
+        settings: {
+          clients: [{ password: TROJAN_PASS }]
+        },
+        streamSettings: {
+          network: 'ws',
+          wsSettings: { path: WS_PATH_TROJAN }
+        }
       }
     ],
     outbounds: [{ protocol: 'freedom', settings: {} }]
@@ -216,6 +235,7 @@ async function main() {
 
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 
+  // 下载并启动 xray
   let xrayBin = '';
   const xrayPaths = ['xray', '/usr/local/bin/xray', '/usr/bin/xray'];
   for (const p of xrayPaths) {
@@ -232,6 +252,7 @@ async function main() {
   });
   xray.on('exit', (code) => process.exit(code));
 
+  // Argo 转发服务，根据路径分发到对应协议
   const argoServer = http.createServer((req, res) => {
     res.writeHead(400);
     res.end('Bad Request');
@@ -271,6 +292,7 @@ async function main() {
     console.log(`Argo 转发服务启动，端口 ${ARGO_PORT}`);
   });
 
+  // 对外 HTTP 服务
   const INDEX_HTML = fs.existsSync('./index.html')
     ? fs.readFileSync('./index.html', 'utf8')
     : '<html><body><h1>Hello World</h1></body></html>';
@@ -290,12 +312,14 @@ async function main() {
     console.log(`HTTP 服务启动，端口 ${INBOUND_PORT}`);
   });
 
+  // 下载并启动 cloudflared
   const cfBin = await downloadCloudflared();
   const argoHost = await startArgoTunnel(cfBin, ARGO_DOMAIN, ARGO_AUTH);
   const HOST = argoHost || 'your-domain.com';
 
+  // 生成三个协议链接
   const VMESS_OBJ = {
-    v: '2', ps: NAME, add: CF_PREFER_HOST, port: '443',
+    v: '2', ps: `${NAME}-VMess`, add: CF_PREFER_HOST, port: '443',
     id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none',
     host: HOST, path: WS_PATH_VMESS, tls: 'tls', sni: HOST
   };
@@ -303,17 +327,14 @@ async function main() {
 
   const VLESS_LINK = `vless://${UUID}@${CF_PREFER_HOST}:443` +
     `?encryption=none&security=tls&sni=${HOST}&type=ws&host=${HOST}` +
-    `&path=${encodeURIComponent(WS_PATH_VLESS)}#${encodeURIComponent(NAME)}`;
+    `&path=${encodeURIComponent(WS_PATH_VLESS)}#${encodeURIComponent(`${NAME}-VLESS`)}`;
 
   const TROJAN_LINK = `trojan://${TROJAN_PASS}@${CF_PREFER_HOST}:443` +
     `?security=tls&sni=${HOST}&type=ws&host=${HOST}` +
-    `&path=${encodeURIComponent(WS_PATH_TROJAN)}#${encodeURIComponent(NAME)}`;
+    `&path=${encodeURIComponent(WS_PATH_TROJAN)}#${encodeURIComponent(`${NAME}-Trojan`)}`;
 
   const ALL_LINKS = [VMESS_LINK, VLESS_LINK, TROJAN_LINK].join('\n');
   global.SUB_CONTENT = Buffer.from(ALL_LINKS).toString('base64');
-
-  const SUB_FILE = `${process.cwd()}/sub.txt`;
-  fs.writeFileSync(SUB_FILE, ALL_LINKS);
 
   console.log('================= 节点链接 =================');
   console.log(`VMess : ${VMESS_LINK}`);
@@ -321,7 +342,6 @@ async function main() {
   console.log(`Trojan: ${TROJAN_LINK}`);
   console.log('============================================');
   console.log(`订阅地址: https://${HOST}${SUB_PATH}`);
-  console.log(`节点文件: ${SUB_FILE}`);
 }
 
 main().catch(err => {
