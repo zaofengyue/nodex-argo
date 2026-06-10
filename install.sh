@@ -47,7 +47,15 @@ INPUT_SUB="${SUB:-}"
 INPUT_ARGO_DOMAIN="${ARGO_DOMAIN:-}"
 INPUT_ARGO_AUTH="${ARGO_AUTH:-}"
 
-if [ -z "$INPUT_UUID" ] && [ -z "$INPUT_PORT" ] && [ -z "$INPUT_ARGO_DOMAIN" ]; then
+# 任意一个变量有值就跳过交互，全部为空才进入交互模式
+if [ -z "$INPUT_UUID" ] && \
+   [ -z "$INPUT_TROJAN_PASS" ] && \
+   [ -z "$INPUT_PORT" ] && \
+   [ -z "$INPUT_ARGO_PORT" ] && \
+   [ -z "$INPUT_NAME" ] && \
+   [ -z "$INPUT_SUB" ] && \
+   [ -z "$INPUT_ARGO_DOMAIN" ] && \
+   [ -z "$INPUT_ARGO_AUTH" ]; then
   echo ""
   echo -e "${YELLOW}========== 环境变量配置（留空使用默认值）==========${NC}"
   read -p "UUID（留空自动生成）: " INPUT_UUID
@@ -197,11 +205,8 @@ EOF
 
 else
   # ── fallback：nohup 立即启动 + ~/.bashrc 进程守活────────────────────
-  # 先立即启动一次
   bash "$WRAPPER"
 
-  # 写入 ~/.bashrc，每次开终端检测进程，死了自动拉起
-  # 与 argosbx 同款思路，pgrep 判断存活避免重复启动
   if ! grep -q "# nodex-argo autostart" "$HOME/.bashrc" 2>/dev/null; then
     cat >> "$HOME/.bashrc" << BASHRCEOF
 
