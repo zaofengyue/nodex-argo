@@ -56,7 +56,7 @@ bash <(wget -qO- https://raw.githubusercontent.com/zaofengyue/nodex-argo/main/in
 命令前指定变量：
 
 ```bash
-UUID=xxx ARGO_DOMAIN=你的域名 ARGO_AUTH=你的Token bash <(curl -sL https://raw.githubusercontent.com/zaofengyue/nodex-argo/main/install.sh)
+UUID=xxx ARGO_DOMAIN=你的域名 ARGO_AUTH="你的Token" bash <(curl -sL https://raw.githubusercontent.com/zaofengyue/nodex-argo/main/install.sh)
 ```
 
 ## 环境变量
