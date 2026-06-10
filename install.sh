@@ -117,6 +117,8 @@ pkill -f "nodex-argo/index.js" 2>/dev/null || true
 # 4. 清理 ~/.bashrc 中的自启条目
 sed -i '/# nodex-argo autostart/d' "\$HOME/.bashrc" 2>/dev/null || true
 sed -i '/nodex-argo/d' "\$HOME/.bashrc" 2>/dev/null || true
+sed -i '/# nodex-argo autostart/d' "\$HOME/.profile" 2>/dev/null || true
+sed -i '/nodex-argo/d' "\$HOME/.profile" 2>/dev/null || true
 
 # 5. 删除文件
 rm -rf "$APP_DIR"
@@ -208,15 +210,17 @@ else
   # ── fallback：nohup 立即启动 + ~/.bashrc 进程守活────────────────────
   bash "$WRAPPER"
 
-  if ! grep -q "# nodex-argo autostart" "$HOME/.bashrc" 2>/dev/null; then
-    cat >> "$HOME/.bashrc" << BASHRCEOF
+for RC_FILE in "$HOME/.bashrc" "$HOME/.profile"; do
+    if ! grep -q "# nodex-argo autostart" "$RC_FILE" 2>/dev/null; then
+      cat >> "$RC_FILE" << RCEOF
 
 # nodex-argo autostart
 if ! pgrep -f "nodex-argo/index.js" >/dev/null 2>&1; then
   bash "$WRAPPER" >/dev/null 2>&1
 fi
-BASHRCEOF
-  fi
+RCEOF
+    fi
+  done
 
   echo ""
   echo -e "${GREEN}服务已通过 nohup 后台启动${NC}"
