@@ -67,18 +67,11 @@ UUID=xxx ARGO_DOMAIN=你的域名 ARGO_AUTH=你的Token bash <(curl -sL https://
 | `TROJAN_PASS` | Trojan 密码 | 自动生成 |
 | `PORT` | 对外监听端口 | `3000` |
 | `ARGO_PORT` | Argo 内部转发端口 | `8001` |
-| `NAME` | 节点名称前缀 | 自动识别国家+ASN |
+| `NAME` | 节点名称前缀 | 自动生成 |
 | `SUB` | 订阅路径 | `sub` |
 | `ARGO_DOMAIN` | 固定隧道域名 | 留空用临时隧道 |
 | `ARGO_AUTH` | 固定隧道 Token | 留空用临时隧道 |
 
-## 节点信息
-
-| 协议 | WS 路径 |
-|---|---|
-| VMess | `/fengyue-vm` |
-| VLESS | `/fengyue-vl` |
-| Trojan | `/fengyue-tr` |
 
 ## 访问地址
 
@@ -95,9 +88,6 @@ UUID=xxx ARGO_DOMAIN=你的域名 ARGO_AUTH=你的Token bash <(curl -sL https://
 4. 复制 token（`ARGO_AUTH`）
 5. 在 Public Hostname 里添加你的域名指向 `http://127.0.0.1:3000`（`ARGO_DOMAIN`）
 
-## 内存需求
-
-最低 256MB，建议 512MB（三个协议同时运行）。
 
 ## 注意事项
 
