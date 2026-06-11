@@ -36,7 +36,6 @@ mkdir -p "$APP_DIR" && cd "$APP_DIR"
 echo -e "${GREEN}正在拉取文件...${NC}"
 $DL "$BASE_URL/index.js" $DL_O index.js
 $DL "$BASE_URL/package.json" $DL_O package.json
-$DL "$BASE_URL/index.html" $DL_O index.html
 
 INPUT_UUID="${UUID:-}"
 INPUT_TROJAN_PASS="${TROJAN_PASS:-}"
@@ -58,6 +57,7 @@ if [ -n "$INPUT_UUID" ] || \
    [ -n "$INPUT_ARGO_AUTH" ]; then
   :
 else
+  echo ""
   echo -e "${YELLOW}========== 环境变量配置（留空使用默认值）==========${NC}"
   read -p "UUID（留空自动生成）: " INPUT_UUID
   read -p "TROJAN_PASS（留空自动生成）: " INPUT_TROJAN_PASS
@@ -114,27 +114,32 @@ fi
 # 3. 兜底：按进程名 kill
 pkill -f "nodex-argo/index.js" 2>/dev/null || true
 
-# 4. 清理 ~/.bashrc 中的自启条目
-sed -i '/# nodex-argo autostart/d' "\$HOME/.bashrc" 2>/dev/null || true
-sed -i '/nodex-argo/d' "\$HOME/.bashrc" 2>/dev/null || true
-sed -i '/# nodex-argo autostart/d' "\$HOME/.profile" 2>/dev/null || true
-sed -i '/nodex-argo/d' "\$HOME/.profile" 2>/dev/null || true
+# 4. 清理所有启动文件中的自启条目
+for RC_FILE in "\$HOME/.bashrc" "\$HOME/.profile" "\$HOME/.bash_profile" "\$HOME/.zshrc"; do
+  sed -i '/# nodex-argo PATH/d' "\$RC_FILE" 2>/dev/null || true
+  sed -i '/# nodex-argo autostart/d' "\$RC_FILE" 2>/dev/null || true
+  sed -i '/nodex-argo/d' "\$RC_FILE" 2>/dev/null || true
+done
 
 # 5. 删除文件
 rm -rf "$APP_DIR"
-rm -f "\$HOME/xray.zip" "\$HOME/xray" "\$HOME/cloudflared"
-rm -rf "\$HOME/xray" "\$HOME/v2ray"
+rm -f "\$HOME/xray.zip" "\$HOME/cloudflared"
+rm -rf "\$HOME/xray"
 rm -f "\$HOME/uuid.txt" "\$HOME/trojan.txt" "\$HOME/xray-config.json"
 rm -f "$LOCAL_BIN/nodex-sub" "$LOCAL_BIN/nodex-del"
 echo "删除完成"
 DELCMD
 chmod +x "$LOCAL_BIN/nodex-del"
 
-# 确保 ~/.local/bin 在 PATH 中
+# ── 确保 ~/.local/bin 在 PATH 中，写入所有存在的启动文件 ─────────────────
 if ! echo "$PATH" | grep -q "$LOCAL_BIN"; then
-  echo "" >> "$HOME/.bashrc"
-  echo "# nodex-argo PATH" >> "$HOME/.bashrc"
-  echo "export PATH=\"$LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
+  for RC_FILE in "$HOME/.bashrc" "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.zshrc"; do
+    if [ -f "$RC_FILE" ]; then
+      echo "" >> "$RC_FILE"
+      echo "# nodex-argo PATH" >> "$RC_FILE"
+      echo "export PATH=\"$LOCAL_BIN:\$PATH\"" >> "$RC_FILE"
+    fi
+  done
   export PATH="$LOCAL_BIN:$PATH"
 fi
 
@@ -160,7 +165,7 @@ echo \$! > "$APP_DIR/nodex.pid"
 WRAPEOF
 chmod +x "$WRAPPER"
 
-# ── 开机自启：优先用户级 systemd，否则写入 ~/.bashrc ─────────────────────
+# ── 开机自启：优先用户级 systemd，否则写入所有启动文件 ───────────────────
 USER_SYSTEMD_OK=false
 if command -v systemctl >/dev/null 2>&1 && systemctl --user status >/dev/null 2>&1; then
   USER_SYSTEMD_OK=true
@@ -207,11 +212,11 @@ EOF
   echo -e "${GREEN}查看日志: journalctl --user -u nodex-argo -f${NC}"
 
 else
-  # ── fallback：nohup 立即启动 + ~/.bashrc 进程守活────────────────────
+  # ── fallback：nohup 立即启动 + 写入所有启动文件 ──────────────────────
   bash "$WRAPPER"
 
-for RC_FILE in "$HOME/.bashrc" "$HOME/.profile"; do
-    if ! grep -q "# nodex-argo autostart" "$RC_FILE" 2>/dev/null; then
+  for RC_FILE in "$HOME/.bashrc" "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.zshrc"; do
+    if [ -f "$RC_FILE" ] && ! grep -q "# nodex-argo autostart" "$RC_FILE" 2>/dev/null; then
       cat >> "$RC_FILE" << RCEOF
 
 # nodex-argo autostart
