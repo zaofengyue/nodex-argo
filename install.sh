@@ -38,7 +38,6 @@ $DL "$BASE_URL/index.js" $DL_O index.js
 $DL "$BASE_URL/package.json" $DL_O package.json
 
 INPUT_UUID="${UUID:-}"
-INPUT_TROJAN_PASS="${TROJAN_PASS:-}"
 INPUT_PORT="${PORT:-}"
 INPUT_ARGO_PORT="${ARGO_PORT:-}"
 INPUT_NAME="${NAME:-}"
@@ -48,7 +47,6 @@ INPUT_ARGO_AUTH="${ARGO_AUTH:-}"
 
 # 任意一个变量有值就跳过交互，全部为空才进入交互模式
 if [ -n "$INPUT_UUID" ] || \
-   [ -n "$INPUT_TROJAN_PASS" ] || \
    [ -n "$INPUT_PORT" ] || \
    [ -n "$INPUT_ARGO_PORT" ] || \
    [ -n "$INPUT_NAME" ] || \
@@ -60,8 +58,7 @@ else
   echo ""
   echo -e "${YELLOW}========== 环境变量配置（留空使用默认值）==========${NC}"
   read -p "UUID（留空自动生成）: " INPUT_UUID
-  read -p "TROJAN_PASS（留空自动生成）: " INPUT_TROJAN_PASS
-  read -p "PORT（留空默认 3000）: " INPUT_PORT
+  read -p "PORT（留空默认自动）: " INPUT_PORT
   read -p "ARGO_PORT（留空默认 8001）: " INPUT_ARGO_PORT
   read -p "NAME/节点名称前缀（留空自动识别）: " INPUT_NAME
   read -p "SUB/订阅路径（留空默认 sub）: " INPUT_SUB
@@ -72,7 +69,6 @@ else
 fi
 
 export UUID="$INPUT_UUID"
-export TROJAN_PASS="$INPUT_TROJAN_PASS"
 export PORT="$INPUT_PORT"
 export ARGO_PORT="$INPUT_ARGO_PORT"
 export NAME="$INPUT_NAME"
@@ -125,7 +121,7 @@ done
 rm -rf "$APP_DIR"
 rm -f "\$HOME/xray.zip" "\$HOME/cloudflared"
 rm -rf "\$HOME/xray"
-rm -f "\$HOME/uuid.txt" "\$HOME/trojan.txt" "\$HOME/xray-config.json"
+rm -f "\$HOME/uuid.txt" "\$HOME/xray-config.json"
 rm -f "$LOCAL_BIN/nodex-sub" "$LOCAL_BIN/nodex-del"
 echo "删除完成"
 DELCMD
@@ -151,7 +147,6 @@ cat > "$WRAPPER" << WRAPEOF
 #!/bin/bash
 # nodex-argo 自动生成的启动包装脚本，请勿手动修改
 export UUID="$INPUT_UUID"
-export TROJAN_PASS="$INPUT_TROJAN_PASS"
 export PORT="$INPUT_PORT"
 export ARGO_PORT="$INPUT_ARGO_PORT"
 export NAME="$INPUT_NAME"
@@ -185,7 +180,6 @@ After=network.target
 Type=simple
 WorkingDirectory=$APP_DIR
 Environment=UUID=$INPUT_UUID
-Environment=TROJAN_PASS=$INPUT_TROJAN_PASS
 Environment=PORT=$INPUT_PORT
 Environment=ARGO_PORT=$INPUT_ARGO_PORT
 Environment=NAME=$INPUT_NAME
